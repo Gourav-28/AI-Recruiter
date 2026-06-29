@@ -9,16 +9,16 @@ import re
 from datetime import datetime
 from sentence_transformers import SentenceTransformer, util
 
-# 👇 INITIALIZE CONTEXTUAL BRAIN (Loads once into RAM when application boots)
-print("🧠 Initializing Semantic AI Matching Engine...")
+#Loads once into RAM when application boots
+print("Initializing Semantic AI Matching Engine...")
 semantic_model = SentenceTransformer('all-MiniLM-L6-v2')
 
-# 👇 GLOBAL PERFORMANCE CACHE
+#GLOBAL PERFORMANCE CACHE
 _cached_jd_text = None
 _cached_jd_embedding = None
 
 
-# --- 1. MEMORY-SAFE HYBRID STREAMING INGESTOR ---
+#1 MEMORY-SAFE HYBRID STREAMING INGESTOR
 def stream_candidates(uploaded_file):
     """
     Streams candidates safely by auto-detecting compressed Gzip format,
@@ -47,7 +47,7 @@ def stream_candidates(uploaded_file):
                     yield json.loads(line)
 
 
-# --- 2. FIREWALL FILTRATION (ANTI-FRAUD LOGIC) ---
+#2 FIREWALL FILTRATION (ANTI-FRAUD LOGIC)
 def is_honeypot(candidate):
     """
     Evaluates profile integrity markers to catch programmatic bot accounts.
@@ -69,7 +69,7 @@ def is_honeypot(candidate):
     return False
 
 
-# --- 3. HIGH-SPEED VECTORIZED BATCH RE-RANKER ---
+#3 HIGH-SPEED VECTORIZED BATCH RE-RANKER
 def rank_retrieved_pool(candidate_pool, jd_embedding):
     """
     Processes only the top filtered candidates using heavy AI matrix transformations.
@@ -93,7 +93,7 @@ def rank_retrieved_pool(candidate_pool, jd_embedding):
     if not batch_texts:
         return []
 
-    # Run AI vector conversion on the refined 1,500 chunk (incredibly fast batch pass)
+    # Run AI vector conversion on the refined 1,500 chunk
     batch_embeddings = semantic_model.encode(batch_texts, convert_to_tensor=True, show_progress_bar=False)
     similarities = util.cos_sim(jd_embedding, batch_embeddings)[0].tolist()
 
@@ -161,7 +161,7 @@ def rank_retrieved_pool(candidate_pool, jd_embedding):
     return final_ranked_results
 
 
-# --- 4. STREAM ORCHESTRATOR WITH TWO-STAGE HEAP ---
+#4 STREAM ORCHESTRATOR WITH TWO-STAGE HEAP
 def get_top_100(uploaded_file, jd_requirements):
     """
     Executes a high-performance two-stage retrieval pipeline.
@@ -169,19 +169,19 @@ def get_top_100(uploaded_file, jd_requirements):
     """
     global _cached_jd_text, _cached_jd_embedding
     
-    # 1. Parse and tokenize the JD keywords for ultra-fast Stage 1 filtering
+    
     jd_words = set(re.findall(r'\w+', jd_requirements.lower()))
     
-    # Heap boundary for Stage 1 (Extracting the top 1,500 profiles based on heuristic keywords)
+    
     RETRIEVAL_LIMIT = 1500
     stage1_heap = []
     
-    # Stage 1: Light-speed streaming heuristic pass (Keeps RAM minimal, runs instantly)
+    
     for candidate in stream_candidates(uploaded_file):
         if is_honeypot(candidate):
             continue
             
-        # Quick token match across user skill names
+        #match across user skill names
         skills_list = candidate.get("skills", [])
         matched_count = 0
         for s in skills_list:
@@ -191,8 +191,7 @@ def get_top_100(uploaded_file, jd_requirements):
             elif any(word in jd_words for word in skill_name.split()):
                 matched_count += 1
 
-        # Use a lightweight tuple tracking (heuristic_score, unique_index_or_id, candidate_object)
-        # We wrap candidate in a container or drop it natively into the heap
+    
         candidate_id = candidate.get("candidate_id", "")
         
         if len(stage1_heap) < RETRIEVAL_LIMIT:
@@ -201,21 +200,21 @@ def get_top_100(uploaded_file, jd_requirements):
             if matched_count > stage1_heap[0][0]:
                 heapq.heappushpop(stage1_heap, (matched_count, candidate_id, candidate))
 
-    # Extract our distilled high-value candidate pool from the heap
+    
     high_value_pool = [item[2] for item in stage1_heap]
     
     if not high_value_pool:
         return []
 
     # 2. Encode the Job Description once via AI
-    # 👇 FIX: Added explicit check to ensure embedding is not None
+   
     if _cached_jd_text != jd_requirements or _cached_jd_embedding is None:
         _cached_jd_text = jd_requirements
         _cached_jd_embedding = semantic_model.encode(jd_requirements, convert_to_tensor=True)
 
-    # Stage 2: Heavy Semantic Re-ranking over the 1,500 candidates
+    #Re-ranking over the 1,500 candidates
     all_scored_candidates = rank_retrieved_pool(high_value_pool, _cached_jd_embedding)
     
-    # Extract final Top 100 cleanly sorted
+    #final Top 100 cleanly sorted
     top_100 = heapq.nlargest(100, all_scored_candidates, key=lambda x: x[0])
     return top_100
