@@ -1,6 +1,4 @@
-# ==========================================
-# engine.py - TWO-STAGE ULTRA-FAST RANKER
-# ==========================================
+#engine.py 
 import gzip
 import json
 import io
