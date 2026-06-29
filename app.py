@@ -2,16 +2,14 @@ import streamlit as st
 import pandas as pd
 import random
 
-# Import your high-speed backend ranking engine
+# Import backend ranking engine
 try:
     from engine import get_top_100
 except ImportError:
-    # Fallback placeholder so the app doesn't crash if backend isn't ready yet
+    # Fallback placeholder
     def get_top_100(file, jd): return None
 
-# ==========================================
-# 1. PAGE SETUP & STYLING
-# ==========================================
+# 1 PAGE SETUP & STYLING
 st.set_page_config(
     page_title="AI Recruiter Command Center", 
     page_icon="🛡️", 
@@ -35,9 +33,7 @@ st.title("🛡️ AI Recruiter Command Center")
 st.caption("Hack2Skill India Run Hackathon — Automated Candidate Ranking & Honeypot Filter Pipeline")
 st.write("---")
 
-# ==========================================
-# 2. SIDEBAR - DATA INGESTION
-# ==========================================
+# 2 SIDEBAR - DATA INGESTION
 st.sidebar.header("📥 Data Ingestion")
 st.sidebar.write("Upload raw candidate profile chunks for real-time ranking and trap detection.")
 
@@ -52,9 +48,7 @@ JD_REQUIREMENTS = "Looking for Core Software Engineers, NLP systems expert, Rust
 st.sidebar.write("---")
 st.sidebar.subheader("⚙️ System Status")
 
-# ==========================================
-# 3. MOCK DATA GENERATOR (For UI Testing fallback)
-# ==========================================
+# 3 MOCK DATA GENERATOR (For UI Testing fallback)
 @st.cache_data
 def load_mock_results():
     mock_names = ["Candidate_UX_01", "Candidate_FS_99", "Candidate_DE_42", "Candidate_AI_07", "Candidate_SYS_11"]
@@ -78,9 +72,7 @@ def load_mock_results():
         })
     return pd.DataFrame(data)
 
-# ==========================================
-# 4. PIPELINE EXECUTION BRIDGE
-# ==========================================
+# 4 PIPELINE EXECUTION BRIDGE
 df_results = None
 is_live_data = False
 
@@ -123,9 +115,8 @@ else:
 if df_results is None:
     df_results = load_mock_results()
 
-# ==========================================
-# 5. SECURITY METRICS PANEL
-# ==========================================
+
+# 5 SECURITY METRICS PANEL
 st.subheader("📊 Live Pipeline Security Analytics")
 
 col1, col2, col3, col4 = st.columns(4)
@@ -144,9 +135,7 @@ with col4:
 
 st.write("---")
 
-# ==========================================
-# 6. CORE INTERACTIVE DATA TABLE
-# ==========================================
+# 6 CORE INTERACTIVE DATA TABLE
 st.subheader("🏆 Top 100 Best-Fit Candidates")
 st.write("Interact with the table headers to dynamically sort rankings based on criteria metrics.")
 
@@ -158,7 +147,6 @@ st.dataframe(
     hide_index=True
 )
 
-# 👇 INSERT THIS NEW SUBMISSION GENERATOR BLOCK HERE 👇
 if is_live_data:
     st.write("### 🗃️ Submission Generator")
     
@@ -186,9 +174,7 @@ if is_live_data:
     )
 st.write("---")
 
-# ==========================================
-# 7. DYNAMIC REASONING INSPECTOR
-# ==========================================
+# 7 DYNAMIC REASONING INSPECTOR
 st.subheader("🔍 Deep-Dive Candidate Inspector")
 st.write("Select a specific Candidate ID below to extract the automated 1-2 sentence alignment justification.")
 
