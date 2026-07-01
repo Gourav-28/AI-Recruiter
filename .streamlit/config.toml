@@ -1,2 +1,8 @@
+# .streamlit/config.toml
+
 [server]
-maxUploadSize = 500
+maxUploadSize = 1024   # Raises the maximum upload limit to 1GB
+maxMessageSize = 1024  # Allows large data states to pass between frontend and backend
+
+[browser]
+gatherUsageStats = false
