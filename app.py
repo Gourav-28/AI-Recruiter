@@ -3,14 +3,14 @@ import pandas as pd
 import random
 import time
 
-# Importing ranking engine
+# Import ranking engine
 try:
     from engine import get_top_100
 except ImportError:
     def get_top_100(file, jd): return None
 
 
-# 1 PAGE SETUP & STYLING
+# 1 PAGE SETUP
 
 st.set_page_config(
     page_title="AI Recruiter Command Center", 
@@ -149,14 +149,13 @@ JD_REQUIREMENTS = "Looking for Core Software Engineers, NLP systems expert, Rust
 with st.sidebar.expander("View Target Requirements", expanded=False):
     st.caption(JD_REQUIREMENTS)
 
-# Session States
+
 if "is_live_data" not in st.session_state:
     st.session_state.is_live_data = False
 if "df_results" not in st.session_state:
     st.session_state.df_results = None
 
-
-# 3 MOCK DATA
+# 3 MOCK DATA ENVIRONMENT GENERATOR
 
 @st.cache_data
 def load_mock_results():
@@ -180,7 +179,7 @@ def load_mock_results():
     return pd.DataFrame(data)
 
 
-# 4 PIPELINE
+# 4 PIPELINE EXECUTION BRIDGE
 
 if uploaded_file:
     st.sidebar.success("Dataset Ingested Successfully")
@@ -264,7 +263,7 @@ with col4:
         st.metric(label="Net Elite Pool Ready", value=val_net, delta="Clean Structured Pool", delta_color="normal")
 
 
-# 6 DATA LAYER & PROGRESS BARS
+# 6. INTERACTIVE DATA & PROGRESS BARS
 
 st.markdown("<div class='section-header'>Top 100 Best-Fit Candidates</div>", unsafe_allow_html=True)
 
@@ -307,7 +306,6 @@ if is_live_data:
             use_container_width=True
         )
 
-
 # 7 REASONING INSPECTOR
 
 st.markdown("<br>", unsafe_allow_html=True)
@@ -320,7 +318,7 @@ selected_id = st.selectbox(
 
 candidate_row = df_results[df_results["Candidate ID"] == selected_id].iloc[0]
 
-# Layout
+
 st.markdown(f"""
     <div class="inspector-card">
         <h3 style="color: #ffffff; margin-top: 0px; font-weight: 600;">Profile Core Metrics: <span style="color: #58a6ff;">{selected_id}</span></h3>
