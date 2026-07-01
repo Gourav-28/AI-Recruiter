@@ -1,4 +1,4 @@
-#engine.py 
+import os
 import gzip
 import json
 import io
@@ -7,21 +7,28 @@ import re
 from datetime import datetime
 from sentence_transformers import SentenceTransformer, util
 
-#Loads once into RAM when application boots
-print("Initializing Semantic AI Matching Engine...")
-semantic_model = SentenceTransformer('all-MiniLM-L6-v2')
 
-#GLOBAL PERFORMANCE CACHE
+MODEL_PATH = "./all-MiniLM-L6-v2"
+
+
+
+if os.path.exists(MODEL_PATH):
+    print("🧠 Initializing Semantic AI Matching Engine (STRICT OFFLINE MODE)...")
+    semantic_model = SentenceTransformer(MODEL_PATH, local_files_only=True)
+else:
+    print("🌐 Local model folder not found. Downloading from Hugging Face for initial setup...")
+    semantic_model = SentenceTransformer('all-MiniLM-L6-v2')
+    semantic_model.save(MODEL_PATH)
+    print(f"✅ Model files successfully saved locally to '{MODEL_PATH}'!")
+
+
+# CACHE
+
 _cached_jd_text = None
 _cached_jd_embedding = None
 
 
-#1 MEMORY-SAFE HYBRID STREAMING INGESTOR
 def stream_candidates(uploaded_file):
-    """
-    Streams candidates safely by auto-detecting compressed Gzip format,
-    plain JSONL line streams, or standard JSON arrays.
-    """
     uploaded_file.seek(0)
     try:
         with gzip.open(uploaded_file, "rt", encoding="utf-8") as f:
@@ -45,7 +52,6 @@ def stream_candidates(uploaded_file):
                     yield json.loads(line)
 
 
-#2 FIREWALL FILTRATION (ANTI-FRAUD LOGIC)
 def is_honeypot(candidate):
     """
     Evaluates profile integrity markers to catch programmatic bot accounts.
@@ -67,16 +73,11 @@ def is_honeypot(candidate):
     return False
 
 
-#3 HIGH-SPEED VECTORIZED BATCH RE-RANKER
+# RE-RANKER
 def rank_retrieved_pool(candidate_pool, jd_embedding):
-    """
-    Processes only the top filtered candidates using heavy AI matrix transformations.
-    """
-    final_ranked_results = []
     batch_texts = []
     valid_candidates = []
 
-    # Format textual data for the transformer
     for candidate in candidate_pool:
         skills_list = candidate.get("skills", [])
         candidate_skills = [str(s.get("name", "")).strip() for s in skills_list if s.get("name")]
@@ -91,14 +92,15 @@ def rank_retrieved_pool(candidate_pool, jd_embedding):
     if not batch_texts:
         return []
 
-    # Run AI vector conversion on the refined 1,500 chunk
     batch_embeddings = semantic_model.encode(batch_texts, convert_to_tensor=True, show_progress_bar=False)
     similarities = util.cos_sim(jd_embedding, batch_embeddings)[0].tolist()
 
-    # Apply behavioral overlays
+    raw_scored_pool = []
+    max_raw_score = 0.0
+
     for idx, candidate in enumerate(valid_candidates):
         similarity = similarities[idx]
-        skill_score = max(0.0, min(100.0, similarity * 100 * 1.2))
+        skill_score = max(0.0, similarity * 100 * 1.2)  
         
         profile = candidate.get("profile", {})
         signals = candidate.get("redrob_signals", {})
@@ -141,56 +143,65 @@ def rank_retrieved_pool(candidate_pool, jd_embedding):
         if signals.get("open_to_work_flag") is True:
             multiplier *= 1.05
 
-        score = max(0.0, min(100.0, base_tech_score * multiplier))
+        raw_score = base_tech_score * multiplier
+        if raw_score > max_raw_score:
+            max_raw_score = raw_score
+            
+        raw_scored_pool.append((raw_score, candidate, similarity))
+
+    final_ranked_results = []
+    if max_raw_score == 0:
+        max_raw_score = 1.0
+        
+    for raw_score, candidate, similarity in raw_scored_pool:
+        normalized_score = max(0.0, min(100.0, (raw_score / max_raw_score) * 100))
+        
+        profile = candidate.get("profile", {})
+        signals = candidate.get("redrob_signals", {})
         years = profile.get("years_of_experience", "N/A")
         
-        c_id = candidate.get("candidate_id") or "Unknown_ID"
+        c_id = str(candidate.get("candidate_id") or "Unknown_ID").strip()
         name = profile.get("anonymized_name", "Anonymous Candidate")
         title = profile.get("current_title", "Engineer")
         resp_rate_pct = int((signals.get("recruiter_response_rate", 0) or 0) * 100)
         
         reasoning = (
-            f"{name} ({title}) matched core vectors at {round(score, 1)}%. "
+            f"{name} ({title}) matched core vectors at {round(normalized_score, 1)}%. "
             f"Maintains a verified {resp_rate_pct}% interaction rate on-platform."
         )
         
-        final_ranked_results.append((score, c_id, reasoning, years))
+        final_ranked_results.append((normalized_score, c_id, reasoning, years))
         
     return final_ranked_results
 
 
-#4 STREAM ORCHESTRATOR WITH TWO-STAGE HEAP
+
 def get_top_100(uploaded_file, jd_requirements):
     """
     Executes a high-performance two-stage retrieval pipeline.
-    Filters 100k streaming rows via swift token matches before running heavy deep learning reranking.
+    Ensures strict alignment with challenge submission rules via deterministic sorting.
     """
     global _cached_jd_text, _cached_jd_embedding
     
-    
     jd_words = set(re.findall(r'\w+', jd_requirements.lower()))
-    
     
     RETRIEVAL_LIMIT = 1500
     stage1_heap = []
-    
     
     for candidate in stream_candidates(uploaded_file):
         if is_honeypot(candidate):
             continue
             
-        #match across user skill names
         skills_list = candidate.get("skills", [])
         matched_count = 0
         for s in skills_list:
             skill_name = str(s.get("name", "")).lower()
             if skill_name in jd_words:
-                matched_count += 2  # Boost exact skill term phrase matches
+                matched_count += 2
             elif any(word in jd_words for word in skill_name.split()):
                 matched_count += 1
 
-    
-        candidate_id = candidate.get("candidate_id", "")
+        candidate_id = str(candidate.get("candidate_id", "")).strip()
         
         if len(stage1_heap) < RETRIEVAL_LIMIT:
             heapq.heappush(stage1_heap, (matched_count, candidate_id, candidate))
@@ -198,21 +209,23 @@ def get_top_100(uploaded_file, jd_requirements):
             if matched_count > stage1_heap[0][0]:
                 heapq.heappushpop(stage1_heap, (matched_count, candidate_id, candidate))
 
-    
     high_value_pool = [item[2] for item in stage1_heap]
     
     if not high_value_pool:
         return []
 
     # 2. Encode the Job Description once via AI
-   
     if _cached_jd_text != jd_requirements or _cached_jd_embedding is None:
         _cached_jd_text = jd_requirements
         _cached_jd_embedding = semantic_model.encode(jd_requirements, convert_to_tensor=True)
 
-    #Re-ranking over the 1,500 candidates
+    # Re-ranking
     all_scored_candidates = rank_retrieved_pool(high_value_pool, _cached_jd_embedding)
     
-    #final Top 100 cleanly sorted
-    top_100 = heapq.nlargest(100, all_scored_candidates, key=lambda x: x[0])
+    # -x[0] sorts by score descending.
+    # str(x[1]) forces deterministic ascending string sorting if scores tie perfectly.
+    perfectly_sorted = sorted(all_scored_candidates, key=lambda x: (-x[0], str(x[1])))
+    
+    # Slice the top 100 rows cleanly
+    top_100 = perfectly_sorted[:100]
     return top_100
