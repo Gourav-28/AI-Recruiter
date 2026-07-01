@@ -184,7 +184,7 @@ def load_mock_results():
 if uploaded_file:
     st.sidebar.success("Dataset Ingested Successfully")
     
-    if st.sidebar.button("Run Live AI Ranking Pipeline", type="primary", use_container_width=True):
+    if st.sidebar.button("Run Live AI Ranking Pipeline", type="primary", width="stretch"):
         with st.status("Initializing High-Performance Matrix Engine...", expanded=True) as status_box:
             
             status_box.write("Accessing compressed streaming bytes...")
