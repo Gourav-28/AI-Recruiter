@@ -58,29 +58,34 @@ if '_cached_jd_embedding' not in globals():
 # --- 1. MEMORY-SAFE HYBRID STREAMING INGESTOR ---
 def stream_candidates(uploaded_file):
     """
-    Streams candidates safely by auto-detecting compressed Gzip format,
-    plain JSONL line streams, or standard JSON arrays.
+    Cloud-resilient stream reader. Safely processes uploaded raw bytes 
+    without causing permission errors or filesystem crashes.
     """
     uploaded_file.seek(0)
-    try:
-        with gzip.open(uploaded_file, "rt", encoding="utf-8") as f:
-            for line in f:
+    # Read the first two bytes to check for official Gzip magic numbers
+    magic_number = uploaded_file.read(2)
+    uploaded_file.seek(0)
+    
+    # If the file is a true compressed .gz file
+    if magic_number == b'\x1f\x8b':
+        with gzip.GzipFile(fileobj=uploaded_file, mode='rb') as gz:
+            text_stream = io.TextIOWrapper(gz, encoding='utf-8')
+            for line in text_stream:
                 if line.strip():
                     yield json.loads(line)
-    except (gzip.BadGzipFile, OSError):
-        uploaded_file.seek(0)
-        first_bytes = uploaded_file.read(10).strip()
+    else:
+        # If the file is standard uncompressed JSONL or a JSON array
+        file_bytes = uploaded_file.read()
         uploaded_file.seek(0)
         
-        if first_bytes.startswith(b'['):
-            content = uploaded_file.read().decode("utf-8")
-            data = json.loads(content)
+        if file_bytes.startswith(b'['):
+            data = json.loads(file_bytes.decode("utf-8"))
             for item in data:
                 yield item
         else:
-            for line_bytes in uploaded_file:
-                line = line_bytes.decode("utf-8").strip()
-                if line:
+            text_stream = io.StringIO(file_bytes.decode("utf-8"))
+            for line in text_stream:
+                if line.strip():
                     yield json.loads(line)
 
 
