@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ResuRank AI — Recruiter Command Center</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon"><i class="fas fa-shield-halved"></i></div>
+      <div class="brand-text">
+        <span class="brand-title">ResuRank AI</span>
+        <span class="brand-sub">Command Center</span>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <h3 class="section-label"><i class="fas fa-cloud-arrow-up"></i> Data Ingestion</h3>
+      <p class="section-desc">Upload raw candidate profile chunks for real-time ranking and trap detection.</p>
+
+      <div class="upload-zone" id="uploadZone">
+        <i class="fas fa-file-arrow-up upload-icon"></i>
+        <p class="upload-text">Drop your <strong>JSON / JSONL</strong> file here</p>
+        <p class="upload-hint">or click to browse</p>
+        <input type="file" id="fileInput" accept=".json,.jsonl" hidden>
+      </div>
+      <div class="file-info" id="fileInfo" hidden>
+        <i class="fas fa-file-circle-check"></i>
+        <span id="fileName">file.jsonl</span>
+        <button class="file-remove" id="fileRemove" title="Remove file"><i class="fas fa-xmark"></i></button>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <h3 class="section-label"><i class="fas fa-file-lines"></i> Job Description</h3>
+      <textarea id="jdInput" class="jd-input" rows="3" placeholder="Paste job requirements or JD text here...">Looking for Core Software Engineers, NLP systems expert, Rust/Python production exp.</textarea>
+    </div>
+
+    <button class="btn-primary" id="runPipelineBtn">
+      <i class="fas fa-rocket"></i>
+      <span>Run AI Ranking Pipeline</span>
+    </button>
+
+    <div class="sidebar-status">
+      <div class="status-item">
+        <span class="status-dot" id="statusDot"></span>
+        <span class="status-label">Engine Status</span>
+        <span class="status-value" id="engineStatus">Checking...</span>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      Hack2Skill India Run Hackathon &mdash; Automated Candidate Ranking
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content" id="mainContent">
+
+    <!-- HEADER -->
+    <header class="topbar">
+      <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+      <h1 class="page-title"><i class="fas fa-shield-halved"></i> AI Recruiter Command Center</h1>
+      <span class="page-badge">Hack2Skill India</span>
+    </header>
+
+    <!-- METRICS -->
+    <section class="metrics-section" id="metricsSection">
+      <div class="metric-card">
+        <div class="metric-icon scanned"><i class="fas fa-users"></i></div>
+        <div class="metric-body">
+          <span class="metric-value" id="metricScanned">100,000</span>
+          <span class="metric-label">Total Scanned</span>
+        </div>
+        <span class="metric-delta">Dataset Total</span>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon purged"><i class="fas fa-broom"></i></div>
+        <div class="metric-body">
+          <span class="metric-value" id="metricPurged">1,412</span>
+          <span class="metric-label">Keyword Stuffers Purged</span>
+        </div>
+        <span class="metric-delta negative">&darr; 8.2%</span>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon defused"><i class="fas fa-shield"></i></div>
+        <div class="metric-body">
+          <span class="metric-value" id="metricDefused">76</span>
+          <span class="metric-label">Honeypots Defused</span>
+        </div>
+        <span class="metric-delta positive">0% in Top 100</span>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon ready"><i class="fas fa-circle-check"></i></div>
+        <div class="metric-body">
+          <span class="metric-value" id="metricNet">98,512</span>
+          <span class="metric-label">Net Elite Pool Ready</span>
+        </div>
+        <span class="metric-delta positive">Clean Data</span>
+      </div>
+    </section>
+
+    <!-- TOOLBAR -->
+    <div class="toolbar">
+      <h2 class="section-title"><i class="fas fa-trophy"></i> Top 100 Best-Fit Candidates</h2>
+      <div class="toolbar-actions">
+        <button class="btn-download" id="downloadBtn" disabled>
+          <i class="fas fa-download"></i> Download submission.csv
+        </button>
+      </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-wrapper">
+      <table class="data-table" id="candidateTable">
+        <thead>
+          <tr>
+            <th data-sort="Rank" class="sortable active asc">Rank <i class="fas fa-sort"></i></th>
+            <th data-sort="CandidateID" class="sortable">Candidate ID <i class="fas fa-sort"></i></th>
+            <th data-sort="FitScore" class="sortable">Fit Score (%) <i class="fas fa-sort"></i></th>
+            <th data-sort="Experience" class="sortable">Experience (Yrs) <i class="fas fa-sort"></i></th>
+            <th data-sort="Security" class="sortable">Security Status <i class="fas fa-sort"></i></th>
+            <th>Reasoning</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr><td colspan="6" class="table-placeholder">Load data to see results</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- DEEP-DIVE INSPECTOR -->
+    <section class="inspector-section">
+      <h2 class="section-title"><i class="fas fa-magnifying-glass"></i> Deep-Dive Candidate Inspector</h2>
+      <p class="section-desc">Select a Candidate ID below to extract the automated alignment justification.</p>
+      <div class="inspector-controls">
+        <select id="candidateSelect" class="inspector-select" disabled>
+          <option value="">— Select a candidate —</option>
+        </select>
+      </div>
+      <div class="inspector-card" id="inspectorCard" hidden>
+        <div class="inspector-header">
+          <h3 id="inspectorName">Profile Summary: CR-2026-1001</h3>
+          <span class="inspector-badge" id="inspectorBadge">#1</span>
+        </div>
+        <div class="inspector-stats">
+          <div class="stat"><span class="stat-label">Rank Fit</span><span class="stat-value" id="inspectorRank">#1</span></div>
+          <div class="stat"><span class="stat-label">Match Score</span><span class="stat-value" id="inspectorScore">95.2%</span></div>
+          <div class="stat"><span class="stat-label">Security</span><span class="stat-value status-cleared" id="inspectorStatus">CLEARED</span></div>
+          <div class="stat"><span class="stat-label">Experience</span><span class="stat-value" id="inspectorExp">4.5 yrs</span></div>
+        </div>
+        <div class="inspector-reasoning" id="inspectorReasoning">
+          <i class="fas fa-quote-left"></i>
+          <p></p>
+        </div>
+      </div>
+    </section>  
+
+    <!-- LOADING OVERLAY -->
+    <div class="loading-overlay" id="loadingOverlay" hidden>
+      <div class="loading-spinner">
+        <div class="spinner"></div>
+        <p>Processing candidates through memory-safe streams...</p>
+      </div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast"></div>
+
+  </main>
+
+  <script src="js/script.js"></script>
+</body>
+</html>

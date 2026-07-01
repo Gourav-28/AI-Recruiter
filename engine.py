@@ -5,15 +5,27 @@ import io
 import heapq
 import re
 from datetime import datetime
-from sentence_transformers import SentenceTransformer, util
 
-#Loads once into RAM when application boots
-print("Initializing Semantic AI Matching Engine...")
-semantic_model = SentenceTransformer('all-MiniLM-L6-v2')
+#Check if AI dependencies are available
+_HAS_AI = False
+try:
+    from sentence_transformers import SentenceTransformer, util as _st_util
+    _HAS_AI = True
+except ImportError:
+    _st_util = None
 
-#GLOBAL PERFORMANCE CACHE
+_semantic_model = None
 _cached_jd_text = None
 _cached_jd_embedding = None
+
+def _get_semantic_model():
+    global _semantic_model
+    if not _HAS_AI:
+        raise ImportError("sentence-transformers is not installed. Run: pip install sentence-transformers")
+    if _semantic_model is None:
+        print("Initializing Semantic AI Matching Engine...")
+        _semantic_model = SentenceTransformer('all-MiniLM-L6-v2')
+    return _semantic_model
 
 
 #1 MEMORY-SAFE HYBRID STREAMING INGESTOR
@@ -92,8 +104,9 @@ def rank_retrieved_pool(candidate_pool, jd_embedding):
         return []
 
     # Run AI vector conversion on the refined 1,500 chunk
-    batch_embeddings = semantic_model.encode(batch_texts, convert_to_tensor=True, show_progress_bar=False)
-    similarities = util.cos_sim(jd_embedding, batch_embeddings)[0].tolist()
+    model = _get_semantic_model()
+    batch_embeddings = model.encode(batch_texts, convert_to_tensor=True, show_progress_bar=False)
+    similarities = _st_util.cos_sim(jd_embedding, batch_embeddings)[0].tolist()
 
     # Apply behavioral overlays
     for idx, candidate in enumerate(valid_candidates):
@@ -205,10 +218,10 @@ def get_top_100(uploaded_file, jd_requirements):
         return []
 
     # 2. Encode the Job Description once via AI
-   
+    model = _get_semantic_model()
     if _cached_jd_text != jd_requirements or _cached_jd_embedding is None:
         _cached_jd_text = jd_requirements
-        _cached_jd_embedding = semantic_model.encode(jd_requirements, convert_to_tensor=True)
+        _cached_jd_embedding = model.encode(jd_requirements, convert_to_tensor=True)
 
     #Re-ranking over the 1,500 candidates
     all_scored_candidates = rank_retrieved_pool(high_value_pool, _cached_jd_embedding)
