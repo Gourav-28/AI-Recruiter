@@ -7,17 +7,45 @@ import re
 from datetime import datetime
 from sentence_transformers import SentenceTransformer, util
 
+# Define your local model folder path inside your repository
 MODEL_PATH = "./all-MiniLM-L6-v2"
 
-# Smart initialization block (Stays 100% offline if local weights are present)
-if os.path.exists(MODEL_PATH):
-    print("Initializing Semantic AI Matching Engine")
-    semantic_model = SentenceTransformer(MODEL_PATH, local_files_only=True)
-else:
-    print("Local model folder not found. Downloading from Hugging Face for initial setup")
-    semantic_model = SentenceTransformer('all-MiniLM-L6-v2')
-    semantic_model.save(MODEL_PATH)
-    print(f"Model files successfully saved locally to '{MODEL_PATH}'!")
+try:
+    import streamlit as st
+    @st.cache_resource
+    def load_shared_model():
+        # Step A: Check if a local compiled model exists and is not empty
+        if os.path.exists(MODEL_PATH) and os.listdir(MODEL_PATH):
+            try:
+                return SentenceTransformer(MODEL_PATH, local_files_only=True)
+            except Exception:
+                pass  # Fallback to download if local files are corrupted
+                
+        # Step B: Download from Hugging Face directly into container cache
+        model = SentenceTransformer('all-MiniLM-L6-v2')
+        
+        # Step C: Try writing locally, pass silently if the server filesystem is read-only
+        try:
+            if not os.path.exists(MODEL_PATH):
+                model.save(MODEL_PATH)
+        except Exception:
+            pass 
+        return model
+        
+    semantic_model = load_shared_model()
+except ImportError:
+    # Pure CLI Fallback Configuration for rank.py
+    if os.path.exists(MODEL_PATH) and os.listdir(MODEL_PATH):
+        try:
+            semantic_model = SentenceTransformer(MODEL_PATH, local_files_only=True)
+        except Exception:
+            semantic_model = SentenceTransformer('all-MiniLM-L6-v2')
+    else:
+        semantic_model = SentenceTransformer('all-MiniLM-L6-v2')
+        try:
+            semantic_model.save(MODEL_PATH)
+        except Exception:
+            pass
 
 # GLOBAL PERFORMANCE CACHE
 
