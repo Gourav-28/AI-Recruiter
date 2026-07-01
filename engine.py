@@ -13,13 +13,13 @@ MODEL_PATH = "./all-MiniLM-L6-v2"
 
 
 if os.path.exists(MODEL_PATH):
-    print("🧠 Initializing Semantic AI Matching Engine (STRICT OFFLINE MODE)...")
+    print("Initializing Semantic AI Matching Engine")
     semantic_model = SentenceTransformer(MODEL_PATH, local_files_only=True)
 else:
-    print("🌐 Local model folder not found. Downloading from Hugging Face for initial setup...")
+    print("Local model folder not found. Downloading from Hugging Face for initial setup")
     semantic_model = SentenceTransformer('all-MiniLM-L6-v2')
     semantic_model.save(MODEL_PATH)
-    print(f"✅ Model files successfully saved locally to '{MODEL_PATH}'!")
+    print(f"Model files successfully saved locally to '{MODEL_PATH}'!")
 
 
 # CACHE
